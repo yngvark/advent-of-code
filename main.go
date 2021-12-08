@@ -1,42 +1,69 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
-	"log"
-	"net/http"
-
-	"github.com/yngvark/go-rest-api-template/pkg/helloworld"
+	"github.com/yngvark/advent-of-code/pkg/helloworld"
+	"os"
+	"strconv"
 )
 
 func main() {
 	fmt.Println(helloworld.Hello())
 
-	port := 8080
-	fmt.Printf("Running web server on port %v\n", port)
-
-	handleRequests(port)
+	err := run()
+	if err != nil {
+		fmt.Println("Program error:")
+		fmt.Println(err.Error())
+	}
 }
 
-func handleRequests(port int) {
-	http.HandleFunc("/", root)
-	http.HandleFunc("/health", health)
+func run() error {
+	file, err := os.Open("data.txt")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
-	address := fmt.Sprintf("%v%v", ":", port)
-	log.Fatal(http.ListenAndServe(address, nil))
-}
+	scanner := bufio.NewScanner(file)
 
-func root(w http.ResponseWriter, req *http.Request) {
-	// The "/" pattern matches everything, so we need to check
-	// that we're at the root here.
-	if req.URL.Path != "/" {
-		http.NotFound(w, req)
-		return
+	increaseCount := 0
+	decreaseCount := 0
+	lastDepth := -1
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		depth, err := toInt(line)
+		if err != nil {
+			return err
+		}
+
+		if lastDepth == -1 {
+			lastDepth = depth
+			continue
+		}
+
+		if depth > lastDepth {
+			increaseCount++
+		} else if depth < lastDepth {
+			decreaseCount++
+		}
+
+		lastDepth = depth
 	}
 
-	fmt.Println("Request to /")
-	_, _ = fmt.Fprintln(w, helloworld.Hello())
+	fmt.Println("---")
+	fmt.Printf("Increases: %d\n", increaseCount)
+	fmt.Printf("Decreases: %d\n", decreaseCount)
+
+	return nil
 }
 
-func health(w http.ResponseWriter, _ *http.Request) {
-	_, _ = fmt.Fprintf(w, "OK")
+func toInt(str string) (int, error) {
+	i, err := strconv.ParseInt(str, 10, 32)
+	if err != nil {
+		return -1, err
+	}
+
+	return int(i), nil
 }
